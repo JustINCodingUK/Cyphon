@@ -68,12 +68,15 @@ struct BinaryExpr : ASTNode {
     }
 };
 
+struct Expression : ASTNode {};
+
+
 struct ConditionalStatement : ASTNode {
-    std::unique_ptr<BinaryExpr> condition;
+    std::unique_ptr<Expression> condition;
     std::unique_ptr<ASTNode> body;
     std::unique_ptr<ASTNode> elseNode;
 
-    ConditionalStatement(std::unique_ptr<BinaryExpr> condition, std::unique_ptr<ASTNode> body,
+    ConditionalStatement(std::unique_ptr<Expression> condition, std::unique_ptr<ASTNode> body,
                          std::unique_ptr<ASTNode> elseNode)
         : condition(std::move(condition)), body(std::move(body)), elseNode(std::move(elseNode)) {
     }
@@ -81,23 +84,22 @@ struct ConditionalStatement : ASTNode {
 
 struct ForStatement : ASTNode {
     std::string identifier;
-    std::unique_ptr<BinaryExpr> iterable;
+    std::unique_ptr<Expression> iterable;
     std::unique_ptr<ASTNode> body;
 
-    ForStatement(std::string identifier, std::unique_ptr<BinaryExpr> iterable, std::unique_ptr<ASTNode> body)
+    ForStatement(std::string identifier, std::unique_ptr<Expression> iterable, std::unique_ptr<ASTNode> body)
         : identifier(std::move(identifier)), iterable(std::move(iterable)), body(std::move(body)) {};
 };
 
 struct WhileStatement : ASTNode {
-    std::unique_ptr<BinaryExpr> condition;
+    std::unique_ptr<Expression> condition;
     std::unique_ptr<ASTNode> body;
 
-    WhileStatement(std::unique_ptr<BinaryExpr> condition, std::unique_ptr<ASTNode> body)
+    WhileStatement(std::unique_ptr<Expression> condition, std::unique_ptr<ASTNode> body)
         : condition(std::move(condition)), body(std::move(body)) {
     };
 };
 
-struct Expression : ASTNode {};
 
 struct Literal : Expression {
     std::string type;
