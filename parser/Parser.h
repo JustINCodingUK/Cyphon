@@ -10,8 +10,8 @@
 #include "ASTNode.h"
 
 class Parser {
-    std::vector<Token> tokens;
     int index = 0;
+    std::vector<Token> tokens;
     Token peek();
     Token consume();
     Token consume(TokenType type, const std::string& error);
@@ -19,13 +19,13 @@ class Parser {
     bool isAtEnd() const;
 
 public:
-    Parser(std::vector<Token> tokens);
+    explicit Parser(std::vector<Token> tokens);
     ~Parser();
 
     std::vector<std::unique_ptr<ASTNode>> parse();
-    std::unique_ptr<ASTNode> classDeclaration();
-    std::unique_ptr<ASTNode> functionDeclaration();
-    std::unique_ptr<ASTNode> extensionFunctionDeclaration();
+    std::unique_ptr<ASTNode> classDeclaration(Visibility visibility);
+    std::unique_ptr<ASTNode> functionDeclaration(Visibility visibility);
+    std::unique_ptr<ASTNode> extensionFunctionDeclaration(Visibility visibility);
     std::vector<Parameter> parameterList();
     Parameter parameter();
     std::unique_ptr<ASTNode> conditionalStatement();
@@ -33,7 +33,7 @@ public:
     std::unique_ptr<ASTNode> forStatement();
     std::unique_ptr<ASTNode> block();
     std::unique_ptr<ASTNode> statement();
-    std::unique_ptr<BinaryExpr> expression();
+    std::unique_ptr<Expression> expression();
 };
 
 
