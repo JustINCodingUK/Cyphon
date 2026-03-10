@@ -12,4 +12,8 @@ add_executable(pyc__ main.cpp
         parser/Parser.h
         parser/ASTNode.cpp
         parser/ASTNode.h
-        parser/Visibility.h)
+        util/variant_utils.h
+        util/variant_utils.cpp
+        analyzer/semantic_analyzer.cpp
+        analyzer/semantic_analyzer.h
+        parser/Common.h)
