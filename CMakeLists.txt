@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 4.1)
-project(pyc__)
+project(typhon)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(pyc__ main.cpp
+add_executable(typhon main.cpp
         lexer/Token.cpp
         lexer/Lexer.cpp
         lexer/Lexer.h

@@ -1,5 +1,5 @@
-#ifndef PYC___LEXER_H
-#define PYC___LEXER_H
+#ifndef TYPHON_LEXER_H
+#define TYPHON_LEXER_H
 #include <string>
 #include <vector>
 #include "Token.h"
@@ -15,4 +15,4 @@ public:
     static std::vector<std::string> tokenize_raw(std::string &file);
 };
 
-#endif //PYC___LEXER_H
+#endif //TYPHON_LEXER_H

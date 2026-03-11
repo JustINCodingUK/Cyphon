@@ -1,9 +1,9 @@
-#ifndef PYC___TOKEN_H
-#define PYC___TOKEN_H
+#ifndef TYPHON_TOKEN_H
+#define TYPHON_TOKEN_H
 #include <string>
 #include <variant>
 
-#endif //PYC___TOKEN_H
+#endif //TYPHON_TOKEN_H
 
 enum class TokenType {
     // Symbols

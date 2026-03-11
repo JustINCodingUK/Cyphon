@@ -2,8 +2,8 @@
 // Created by justinw on 10/03/2026.
 //
 
-#ifndef PYC___COMMON_H
-#define PYC___COMMON_H
+#ifndef TYPHON_COMMON_H
+#define TYPHON_COMMON_H
 
 enum Precedence {
     NONE,
@@ -24,4 +24,4 @@ enum class Visibility {
     PUBLIC, PRIVATE, INTERNAL
 };
 
-#endif //PYC___COMMON_H
+#endif //TYPHON_COMMON_H

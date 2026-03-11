@@ -2,8 +2,8 @@
 // Created by justinw on 06/03/2026.
 //
 
-#ifndef PYC___PARSER_H
-#define PYC___PARSER_H
+#ifndef TYPHON_PARSER_H
+#define TYPHON_PARSER_H
 #include <functional>
 #include <memory>
 #include <vector>
@@ -48,4 +48,4 @@ private:
 };
 
 
-#endif //PYC___PARSER_H
+#endif //TYPHON_PARSER_H

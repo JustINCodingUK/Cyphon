@@ -2,8 +2,8 @@
 // Created by justinw on 06/03/2026.
 //
 
-#ifndef PYC___ASTNODE_H
-#define PYC___ASTNODE_H
+#ifndef TYPHON_ASTNODE_H
+#define TYPHON_ASTNODE_H
 #include <memory>
 #include <utility>
 #include <vector>
@@ -178,4 +178,4 @@ struct AssignExpression : Expression {
     AssignExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> value) : left(std::move(left)), value(std::move(value)) {}
 };
 
-#endif //PYC___ASTNODE_H
+#endif //TYPHON_ASTNODE_H
