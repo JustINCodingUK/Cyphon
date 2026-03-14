@@ -18,7 +18,7 @@ void SymbolTable::exitScope() {
     scopes.pop_back();
 }
 
-void SymbolTable::define(const std::string &name, Symbol &sym) {
+void SymbolTable::define(const std::string &name, std::shared_ptr<Symbol> sym) {
     scopes.back().emplace(name, sym);
 }
 
@@ -36,9 +36,5 @@ std::shared_ptr<Symbol> SymbolTable::resolve(const std::string &name) {
 std::shared_ptr<Symbol> SymbolTable::resolveClassMember(const std::string &className, const std::string &memberName) {
     const auto classSymbol = std::dynamic_pointer_cast<ClassSymbol>(resolve(className));
     if (classSymbol == nullptr) return nullptr;
-    if (classSymbol->members.contains(memberName)) {
-        return classSymbol->members.at(memberName);
-    }
-    return nullptr;
+    return classSymbol->members->resolve(memberName);
 }
-

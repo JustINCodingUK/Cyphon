@@ -23,22 +23,8 @@ struct Symbol {
     virtual ~Symbol() = default;
 };
 
-struct ClassSymbol : Symbol {
-    std::unordered_map<std::string, std::shared_ptr<Symbol>> members;
-    std::string name;
-    const Type type;
-    Visibility visibility;
-
-    ClassSymbol(std::string name, std::unordered_map<std::string, std::shared_ptr<Symbol>> members, Type type,
-                const Visibility visibility)
-        : Symbol(std::move(name), std::move(type), visibility, true), members(std::move(members)),
-          name(std::move(name)), type(std::move(type)), visibility(visibility) {
-        if (type.kind!=TypeKind::CLASS) throw std::runtime_error("ClassSymbol is not a class");
-    }
-};
-
 class SymbolTable {
-    std::vector<std::unordered_map<std::string, std::shared_ptr<Symbol>>> scopes;
+    std::vector<std::unordered_map<std::string, std::shared_ptr<Symbol> > > scopes;
 
 public:
     SymbolTable();
@@ -49,12 +35,25 @@ public:
 
     void exitScope();
 
-    void define(const std::string &name, Symbol &sym);
+    void define(const std::string &name, std::shared_ptr<Symbol> sym);
 
     std::shared_ptr<Symbol> resolve(const std::string &name);
 
     std::shared_ptr<Symbol> resolveClassMember(const std::string &className, const std::string &memberName);
 };
 
+struct ClassSymbol : Symbol {
+    std::unique_ptr<SymbolTable> members;
+    std::string name;
+    const Type type;
+    Visibility visibility;
+
+    ClassSymbol(std::string name, std::unique_ptr<SymbolTable> members, Type type,
+                const Visibility visibility)
+        : Symbol(std::move(name), std::move(type), visibility, true), members(std::move(members)),
+          name(std::move(name)), type(std::move(type)), visibility(visibility) {
+        if (type.kind != TypeKind::CLASS) throw std::runtime_error("ClassSymbol is not a class");
+    }
+};
 
 #endif //TYPHON_SYMBOL_H
