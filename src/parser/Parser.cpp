@@ -297,7 +297,7 @@ std::unique_ptr<Expression> Parser::parseInfix(std::unique_ptr<Expression> left,
         case TokenType::ModuloAssign:
         case TokenType::PowerAssign: {
             auto value = parseExpression(ASSIGNMENT - 1);
-            if (auto *var = dynamic_cast<VariableExpression *>(left.get())) {
+            if (auto *var = dynamic_cast<Identifier *>(left.get())) {
                 return std::make_unique<CompoundAssignExpression>(var->name, op, std::move(value));
             }
             if (auto *get = dynamic_cast<GetExpression *>(left.get())) {
