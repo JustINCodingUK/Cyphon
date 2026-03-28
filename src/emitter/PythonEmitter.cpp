@@ -173,7 +173,8 @@ void PythonEmitter::begin() {
     for (const auto& node : tree) node->accept(this);
 }
 
-void PythonEmitter::writeToFile(const std::string& fileName) const {
+void PythonEmitter::writeToFile(const std::string& fileName) {
+    begin();
     std::ofstream outFile(fileName);
     outFile << out;
     outFile.close();

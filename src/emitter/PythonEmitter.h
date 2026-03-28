@@ -41,7 +41,7 @@ public:
     void visit(Parameter *expr) override;
     void visit(Body *expr) override;
     void begin();
-    void writeToFile(const std::string& fileName) const;
+    void writeToFile(const std::string& fileName);
 };
 
 
