@@ -11,6 +11,8 @@ file(GLOB_RECURSE TYPHON_SOURCES
         "errors/*.h"
         "types/*.cpp"
         "types/*.h"
+        "emitter/*.cpp"
+        "emitter/*.h"
 )
 
 add_library(typhon_core STATIC ${TYPHON_SOURCES})
