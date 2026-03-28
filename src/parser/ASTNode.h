@@ -15,7 +15,7 @@
 #include "common/Visitor.h"
 
 struct ASTNode {
-    virtual ~ASTNode();
+    virtual ~ASTNode() = default;
 
     virtual void accept(Visitor *visitor) = 0;
 };
@@ -121,7 +121,8 @@ struct Class : ASTNode {
 struct Expression : ASTNode {
     ~Expression() override = default;
 
-    Type evaluatedType;
+    std::shared_ptr<Type> evaluatedType;
+    Expression() : evaluatedType() {};
 };
 
 struct BinaryExpr : Expression {
@@ -167,9 +168,9 @@ struct WhileStatement : ASTNode {
 
 struct Identifier : Expression {
     std::string name;
-    Type evaluatedType;
+    std::shared_ptr<Type> evaluatedType;
 
-    Identifier(std::string name) : name(std::move(name)), evaluatedType(Type::Uninitialized()) {
+    Identifier(std::string name) : name(std::move(name)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     };
 
     void accept(Visitor *visitor) override {
@@ -206,9 +207,9 @@ struct UnaryExpression : Expression {
 
 struct Literal : Expression {
     Token token;
-    Type evaluatedType;
+    std::shared_ptr<Type> evaluatedType;
 
-    Literal(Token token) : token(std::move(token)), evaluatedType(Type::Uninitialized()) {
+    Literal(Token token) : token(std::move(token)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     };
 
     void accept(Visitor *visitor) override {
@@ -219,10 +220,10 @@ struct Literal : Expression {
 struct FunctionCallExpression : Expression {
     std::unique_ptr<Expression> callee;
     std::vector<std::unique_ptr<Expression> > args;
-    Type evaluatedType;
+    std::shared_ptr<Type> evaluatedType;
 
     FunctionCallExpression(std::unique_ptr<Expression> callee, std::vector<std::unique_ptr<Expression> > args)
-        : callee(std::move(callee)), args(std::move(args)), evaluatedType(Type::Uninitialized()) {
+        :Expression(), callee(std::move(callee)), args(std::move(args)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     };
 
     void accept(Visitor *visitor) override {
@@ -233,22 +234,10 @@ struct FunctionCallExpression : Expression {
 struct GetExpression : Expression {
     std::unique_ptr<Expression> left;
     std::string propertyName;
-    Type evaluatedType;
+    std::shared_ptr<Type> evaluatedType;
 
     GetExpression(std::unique_ptr<Expression> left, std::string propertyName) : left(std::move(left)),
-        propertyName(std::move(propertyName)), evaluatedType(Type::Uninitialized()) {
-    };
-
-    void accept(Visitor *visitor) override {
-        visitor->visit(this);
-    }
-};
-
-struct VariableExpression : Expression {
-    std::string name;
-    Type evaluatedType;
-
-    VariableExpression(std::string name) : name(std::move(name)), evaluatedType(Type::Uninitialized()) {
+        propertyName(std::move(propertyName)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     };
 
     void accept(Visitor *visitor) override {
@@ -260,10 +249,10 @@ struct CompoundAssignExpression : Expression {
     std::string name;
     Token op;
     std::unique_ptr<Expression> value;
-    Type evaluatedType;
+    std::shared_ptr<Type> evaluatedType;
 
     CompoundAssignExpression(std::string name, Token op, std::unique_ptr<Expression> value) : name(std::move(name)),
-        op(std::move(op)), value(std::move(value)), evaluatedType(Type::Uninitialized()) {
+        op(std::move(op)), value(std::move(value)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     }
 
     void accept(Visitor *visitor) override {
@@ -276,12 +265,12 @@ struct CompoundSetExpression : Expression {
     std::string propertyName;
     Token op;
     std::unique_ptr<Expression> value;
-    Type evaluatedType;
+    std::shared_ptr<Type> evaluatedType;
 
     CompoundSetExpression(std::unique_ptr<Expression> object, std::string propertyName, Token op,
                           std::unique_ptr<Expression> value)
         : object(std::move(object)), propertyName(std::move(propertyName)), op(std::move(op)), value(std::move(value)),
-          evaluatedType(Type::Uninitialized()) {
+          evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     }
 
     void accept(Visitor *visitor) override {
@@ -292,10 +281,10 @@ struct CompoundSetExpression : Expression {
 struct AssignExpression : Expression {
     std::unique_ptr<Expression> left;
     std::unique_ptr<Expression> value;
-    Type evaluatedType;
+    std::shared_ptr<Type> evaluatedType;
 
     AssignExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> value)
-        : left(std::move(left)), value(std::move(value)), evaluatedType(Type::Uninitialized()) {
+        : left(std::move(left)), value(std::move(value)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     }
 
     void accept(Visitor *visitor) override {
