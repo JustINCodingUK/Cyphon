@@ -36,8 +36,9 @@ public:
     std::unique_ptr<ASTNode> whileStatement();
     std::unique_ptr<ASTNode> forStatement();
     std::unique_ptr<Expression> expression();
-    std::unique_ptr<ASTNode> block();
-    std::vector<std::string> genericDeclaration();
+    std::unique_ptr<Body> block();
+    std::vector<std::unique_ptr<TypeNode>> genericArgumentsDeclaration();
+    std::vector<std::string> genericParametersDeclaration();
     std::unique_ptr<TypeNode> typeDeclaration();
 
 private:
