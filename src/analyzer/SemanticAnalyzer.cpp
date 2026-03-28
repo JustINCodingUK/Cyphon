@@ -11,13 +11,11 @@
 
 SemanticAnalyzer::SemanticAnalyzer() = default;
 
-SemanticAnalyzer::~SemanticAnalyzer() = default;
-
 void SemanticAnalyzer::visit(BinaryExpr *expr) {
     expr->left->accept(this);
     expr->right->accept(this);
 
-    if (expr->left->evaluatedType != expr->right->evaluatedType) {
+    if (*expr->left->evaluatedType != *expr->right->evaluatedType) {
         throw std::runtime_error("TypeError");
     }
     expr->evaluatedType = expr->right->evaluatedType;
@@ -28,7 +26,7 @@ void SemanticAnalyzer::visit(ConditionalStatement *expr) {
     expr->body->accept(this);
     expr->elseNode->accept(this);
 
-    if (expr->condition->evaluatedType != Type::Bool()) {
+    if (*expr->condition->evaluatedType != Type::Bool()) {
         throw std::runtime_error("TypeError");
     }
 }
@@ -47,7 +45,7 @@ void SemanticAnalyzer::visit(ForStatement *expr) {
     expr->iterable->accept(this);
     expr->body->accept(this);
 
-    if (expr->identifier->evaluatedType != expr->iterable->evaluatedType) {
+    if (*expr->identifier->evaluatedType != *expr->iterable->evaluatedType) {
         throw std::runtime_error("TypeError");
     }
 }
@@ -56,7 +54,7 @@ void SemanticAnalyzer::visit(WhileStatement *expr) {
     expr->condition->accept(this);
     expr->body->accept(this);
 
-    if (expr->condition->evaluatedType != Type::Bool()) {
+    if (*expr->condition->evaluatedType != Type::Bool()) {
         throw std::runtime_error("TypeError");
     }
 }
@@ -72,17 +70,17 @@ void SemanticAnalyzer::visit(UnaryExpression *expr) {
 void SemanticAnalyzer::visit(Literal *expr) {
     switch (expr->token.type) {
         case TokenType::IntLiteral:
-            expr->evaluatedType = Type::Int();
+            expr->evaluatedType = std::make_shared<Type>(Type::Int());
             break;
         case TokenType::FloatLiteral:
-            expr->evaluatedType = Type::Float();
+            expr->evaluatedType = std::make_shared<Type>(Type::Float());
             break;
         case TokenType::StringLiteral:
-            expr->evaluatedType = Type::String();
+            expr->evaluatedType = std::make_shared<Type>(Type::String());
             break;
         case TokenType::False:
         case TokenType::True:
-            expr->evaluatedType = Type::Bool();
+            expr->evaluatedType = std::make_shared<Type>(Type::Bool());
             break;
         default: break;
     }
@@ -93,7 +91,7 @@ void SemanticAnalyzer::visit(FunctionCallExpression *expr) {
     const auto &args = expr->args;
     for (int i = 0; i < expr->args.size(); ++i) {
         expr->args[i]->accept(this);
-        if (auto &argType = *expr->evaluatedType.wrappedTypes[i + 1].get(); argType != args[i]->evaluatedType) {
+        if (auto &argType = *expr->evaluatedType->wrappedTypes[i + 1].get(); argType != *args[i]->evaluatedType) {
             throw std::runtime_error("TypeError");
         }
     }
@@ -102,8 +100,8 @@ void SemanticAnalyzer::visit(FunctionCallExpression *expr) {
 void SemanticAnalyzer::visit(GetExpression *expr) {
     expr->left->accept(this);
     const auto &leftType = expr->left->evaluatedType;
-    if (const auto classMember = symbolTable.resolveClassMember(leftType.className, expr->propertyName);
-        classMember == nullptr)
+    if (const auto& classMember = symbolTable.resolveClassMember(leftType->className, expr->propertyName);
+        classMember == nullptr || classMember->visibility == Visibility::PRIVATE)
         throw std::runtime_error("Illegal Access");
 }
 
@@ -120,7 +118,7 @@ void SemanticAnalyzer::visit(Class *expr) {
     auto classSymbolTablePointer = std::make_unique<SymbolTable>(classSymbolTable);
     auto classSymbolType = std::make_unique<Type>(Type::Class(expr->name, std::move(params)));
     const auto classSymbol = std::make_shared<ClassSymbol>(expr->name, std::move(classSymbolTablePointer),
-                                                           std::move(classSymbolType), expr->visibility);
+                                                           classSymbolType, expr->visibility);
     tempTable.define(expr->name, classSymbol);
     symbolTable = tempTable;
 }
@@ -133,7 +131,7 @@ void SemanticAnalyzer::visit(Function *expr) {
 
     auto functionReturnType = typeFromNode(expr->returnType.get());
     auto functionType = std::make_unique<Type>(Type::Function(std::move(functionReturnType), std::move(params)));
-    const auto functionSymbol = std::make_shared<Symbol>(std::move(expr->name), std::move(functionType), expr->visibility,
+    const auto functionSymbol = std::make_shared<Symbol>(std::move(expr->name), functionType, expr->visibility,
                                                    true);
     symbolTable.define(expr->name, functionSymbol);
 }
@@ -149,7 +147,7 @@ void SemanticAnalyzer::visit(AssignExpression *expr) {
     expr->left->accept(this);
     expr->value->accept(this);
 
-    if (expr->left->evaluatedType != expr->value->evaluatedType) {
+    if (*expr->left->evaluatedType != *expr->value->evaluatedType) {
         throw std::runtime_error("TypeError");
     }
 }
@@ -162,7 +160,7 @@ void SemanticAnalyzer::visit(CompoundSetExpression *expr) {
     expr->object->accept(this);
     expr->value->accept(this);
 
-    if (expr->object->evaluatedType != expr->value->evaluatedType) {
+    if (*expr->object->evaluatedType != *expr->value->evaluatedType) {
         throw std::runtime_error("TypeError");
     }
 }
@@ -171,23 +169,28 @@ void SemanticAnalyzer::visit(CompoundAssignExpression *expr) {
     auto sym = symbolTable.resolve(expr->name);
     if (sym==nullptr) throw std::runtime_error("Undeclared identifier");
     expr->value->accept(this);
-    if (expr->value->evaluatedType != *sym->type.get()) throw std::runtime_error("TypeError");
+    if (*expr->value->evaluatedType != *sym->type) throw std::runtime_error("TypeError");
 }
 
-std::vector<std::unique_ptr<Type> > SemanticAnalyzer::defineParameters(
+std::vector<std::unique_ptr<ASTNode>> SemanticAnalyzer::analyze(std::vector<std::unique_ptr<ASTNode> > ast) {
+    for (const auto& node : ast) node->accept(this);
+    return ast;
+}
+
+std::vector<std::unique_ptr<Type>> SemanticAnalyzer::defineParameters(
     SymbolTable &thisSymbolTable, std::vector<Parameter> &params) {
-    std::vector<std::unique_ptr<Type> > out;
+    std::vector<std::unique_ptr<Type>> out;
     for (auto &param: params) {
         param.accept(this);
-        std::vector<std::unique_ptr<Type> > genericParams;
-        for (auto &generic: param.type->genericParams) genericParams.push_back(typeFromNode(generic.get()));
-        auto genericsCopy = genericParams;
+        std::vector<std::unique_ptr<Type>> genericParams;
+        for (auto &generic: param.type->genericParams) {
+            auto type = typeFromNode(generic.get());
+            genericParams.push_back(std::move(type));
+        }
 
         auto paramType = std::make_unique<Type>(Type::Class(param.name, std::move(genericParams)));
-        auto paramTypeCopy = std::make_unique<Type>(Type::Class(param.name, std::move(genericsCopy)));
-
-        const auto paramSymbol = std::make_shared<Symbol>(param.name, std::move(paramType), param.visibility, false);
-        out.push_back(std::move(paramTypeCopy));
+        const auto paramSymbol = std::make_shared<Symbol>(param.name, paramType, param.visibility, false);
+        out.push_back(std::move(paramType));
         thisSymbolTable.define(paramSymbol->name, paramSymbol);
     }
     return out;
@@ -198,6 +201,9 @@ std::unique_ptr<Type> SemanticAnalyzer::typeFromNode(const TypeNode *node) {
         return std::make_unique<Type>(Type::Class(node->typeClass, {}));
     }
     std::vector<std::unique_ptr<Type> > generics;
-    for (auto &generic: node->genericParams) generics.push_back(typeFromNode(generic.get()));
+    for (auto &generic: node->genericParams) {
+        auto type = typeFromNode(generic.get());
+        generics.push_back(std::move(type));
+    };
     return std::make_unique<Type>(Type::Class(node->typeClass, std::move(generics)));
 }

@@ -4,7 +4,6 @@
 
 #ifndef TYPHON_SYMBOL_H
 #define TYPHON_SYMBOL_H
-#include <memory>
 #include <unordered_map>
 
 #include "types/Type.h"
@@ -12,19 +11,19 @@
 
 struct Symbol {
     std::string name;
-    std::unique_ptr<Type> type;
+    std::unique_ptr<Type>& type;
     Visibility visibility;
     bool isInitialized;
 
-    Symbol(std::string name, std::unique_ptr<Type> type, const Visibility visibility, const bool isInitialized)
-        : name(std::move(name)), type(std::move(type)), visibility(visibility), isInitialized(isInitialized) {
+    Symbol(std::string name, std::unique_ptr<Type>& type, const Visibility visibility, const bool isInitialized)
+        : name(std::move(name)), type(type), visibility(visibility), isInitialized(isInitialized) {
     }
 
     virtual ~Symbol() = default;
 };
 
 class SymbolTable {
-    std::vector<std::unordered_map<std::string, std::shared_ptr<Symbol> > > scopes;
+    std::vector<std::unordered_map<std::string, std::shared_ptr<Symbol>>> scopes;
 
 public:
     SymbolTable();
@@ -45,13 +44,13 @@ public:
 struct ClassSymbol : Symbol {
     std::unique_ptr<SymbolTable> members;
     std::string name;
-    std::unique_ptr<Type> type;
+    std::unique_ptr<Type>& type;
     Visibility visibility;
 
-    ClassSymbol(std::string name, std::unique_ptr<SymbolTable> members, std::unique_ptr<Type> type,
+    ClassSymbol(std::string name, std::unique_ptr<SymbolTable> members, std::unique_ptr<Type>& type,
                 const Visibility visibility)
-        : Symbol(std::move(name), std::move(type), visibility, true), members(std::move(members)),
-          name(std::move(name)), type(std::move(type)), visibility(visibility) {
+        : Symbol(std::move(name), type, visibility, true), members(std::move(members)),
+          name(std::move(name)), type(type), visibility(visibility) {
         if (type->kind != TypeKind::CLASS) throw std::runtime_error("ClassSymbol is not a class");
     }
 };

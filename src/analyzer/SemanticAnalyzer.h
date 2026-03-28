@@ -6,12 +6,12 @@
 #define TYPHON_SEMANTIC_ANALYZER_H
 #include "SymbolTable.h"
 #include "common/Visitor.h"
+#include "parser/ASTNode.h"
 
 class SemanticAnalyzer : public Visitor {
     SymbolTable symbolTable;
 public:
     SemanticAnalyzer();
-    ~SemanticAnalyzer() override;
 
     void visit(BinaryExpr *expr) override;
     void visit(ConditionalStatement *expr) override;
@@ -31,6 +31,8 @@ public:
     void visit(Function *expr) override;
     void visit(ExtensionFunction *expr) override;
     void visit(Parameter *expr) override;
+
+    std::vector<std::unique_ptr<ASTNode>> analyze(std::vector<std::unique_ptr<ASTNode>> ast);
 
 private:
     std::vector<std::unique_ptr<Type>> defineParameters(SymbolTable& thisSymbolTable, std::vector<Parameter>& params);
