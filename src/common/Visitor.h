@@ -27,7 +27,7 @@ struct Parameter;
 
 class Visitor {
 public:
-    virtual ~Visitor();
+    virtual ~Visitor() = default;
 
     virtual void visit(BinaryExpr* expr) = 0;
     virtual void visit(ConditionalStatement* expr) = 0;
@@ -38,7 +38,6 @@ public:
     virtual void visit(Literal* expr) = 0;
     virtual void visit(FunctionCallExpression* expr) = 0;
     virtual void visit(GetExpression* expr) = 0;
-    virtual void visit(VariableExpression* expr) = 0;
     virtual void visit(CompoundAssignExpression* expr) = 0;
     virtual void visit(CompoundSetExpression* expr) = 0;
     virtual void visit(AssignExpression* expr) = 0;
