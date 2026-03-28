@@ -12,11 +12,11 @@
 
 struct Symbol {
     std::string name;
-    const Type type;
+    std::unique_ptr<Type> type;
     Visibility visibility;
     bool isInitialized;
 
-    Symbol(std::string name, Type type, const Visibility visibility, const bool isInitialized)
+    Symbol(std::string name, std::unique_ptr<Type> type, const Visibility visibility, const bool isInitialized)
         : name(std::move(name)), type(std::move(type)), visibility(visibility), isInitialized(isInitialized) {
     }
 
@@ -45,14 +45,14 @@ public:
 struct ClassSymbol : Symbol {
     std::unique_ptr<SymbolTable> members;
     std::string name;
-    const Type type;
+    std::unique_ptr<Type> type;
     Visibility visibility;
 
-    ClassSymbol(std::string name, std::unique_ptr<SymbolTable> members, Type type,
+    ClassSymbol(std::string name, std::unique_ptr<SymbolTable> members, std::unique_ptr<Type> type,
                 const Visibility visibility)
         : Symbol(std::move(name), std::move(type), visibility, true), members(std::move(members)),
           name(std::move(name)), type(std::move(type)), visibility(visibility) {
-        if (type.kind != TypeKind::CLASS) throw std::runtime_error("ClassSymbol is not a class");
+        if (type->kind != TypeKind::CLASS) throw std::runtime_error("ClassSymbol is not a class");
     }
 };
 
