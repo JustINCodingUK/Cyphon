@@ -30,11 +30,12 @@ public:
     std::unique_ptr<ASTNode> classDeclaration(Visibility visibility);
     std::unique_ptr<ASTNode> functionDeclaration(Visibility visibility);
     std::unique_ptr<ASTNode> extensionFunctionDeclaration(Visibility visibility);
-    std::vector<Parameter> parameterList();
-    Parameter parameter();
+    std::vector<std::unique_ptr<Parameter>> parameterList();
+    std::unique_ptr<Parameter> parameter();
     std::unique_ptr<ASTNode> conditionalStatement();
     std::unique_ptr<ASTNode> whileStatement();
     std::unique_ptr<ASTNode> forStatement();
+    std::unique_ptr<ASTNode> returnStatement();
     std::unique_ptr<Expression> expression();
     std::unique_ptr<Body> block();
     std::vector<std::unique_ptr<TypeNode>> genericArgumentsDeclaration();

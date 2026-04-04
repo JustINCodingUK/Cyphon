@@ -1,5 +1,8 @@
 #include "Parser.h"
 
+#include <iostream>
+#include <ostream>
+
 Parser::Parser(std::vector<Token> tokens) : tokens(std::move(tokens)) {
 }
 
@@ -23,16 +26,16 @@ Token Parser::consume(const TokenType type, const std::string &error) {
     if (match(type)) return peek(-1);
     perror(
         (error + " at line " + std::to_string(tokens[index].line) + " column " + std::to_string(tokens[index].column) +
-         "\n").c_str());
-    exit(100);
+         "\n" + "Found " + peek().toString() + " instead\n").c_str());
+    exit(1);
 }
 
 Token Parser::consume(const std::function<bool(TokenType)> &predicate, const std::string &error) {
     if (predicate(peek().type)) return consume();
     perror(
         (error + " at line " + std::to_string(tokens[index].line) + " column " + std::to_string(tokens[index].column) +
-         "\n").c_str());
-    exit(100);
+         "\n" + "Found " + peek().toString() + "instead\n").c_str());
+    exit(1);
 }
 
 bool Parser::match(const TokenType type) {
@@ -48,7 +51,8 @@ bool Parser::isAtEnd() const {
 }
 
 std::vector<std::unique_ptr<ASTNode> > Parser::parse() {
-
+    auto globalBody = block();
+    return std::move(globalBody->children);
 }
 
 std::unique_ptr<ASTNode> Parser::classDeclaration(Visibility visibility) {
@@ -58,6 +62,7 @@ std::unique_ptr<ASTNode> Parser::classDeclaration(Visibility visibility) {
     auto parameters = parameterList();
     consume(TokenType::LBrace, "Expected '{'");
     auto body = block();
+    consume(TokenType::RBrace, "Expected '}'");
     return std::make_unique<Class>(name.toString(), std::move(parameters), std::move(generics), std::move(body),
                                    visibility);
 }
@@ -67,11 +72,12 @@ std::unique_ptr<ASTNode> Parser::functionDeclaration(Visibility visibility) {
     Token name = consume(TokenType::Identifier, "Expected function name");
     auto generics = genericParametersDeclaration();
     auto parameters = parameterList();
-    consume(TokenType::Arrow, "Expected return type");
-    auto returnType = typeDeclaration();
+    auto returnType = std::make_unique<TypeNode>("Default");
+    if (match(TokenType::Arrow)) returnType = typeDeclaration();
+
     consume(TokenType::LBrace, "Expected '{'");
     auto body = block();
-
+    consume(TokenType::RBrace, "Expected '}'");
     return std::make_unique<Function>(name.toString(), std::move(returnType), std::move(generics),
                                       std::move(parameters), std::move(body), visibility);
 }
@@ -84,30 +90,33 @@ std::unique_ptr<ASTNode> Parser::extensionFunctionDeclaration(Visibility visibil
     Token name = consume(TokenType::Identifier, "Expected extension function name");
     auto generics = genericParametersDeclaration();
     auto parameters = parameterList();
-    consume(TokenType::Arrow, "Expected return type");
-    auto returnType = typeDeclaration();
+    auto returnType = std::make_unique<TypeNode>("Default");
+    if (match(TokenType::Arrow)) {
+        returnType = typeDeclaration();
+    }
     consume(TokenType::LBrace, "Expected '{'");
     auto body = block();
-
+    consume(TokenType::RBrace, "Expected '}'");
     return std::make_unique<ExtensionFunction>(name.toString(), std::move(returnType), std::move(extensionOn),
                                                std::move(parameters), std::move(generics), std::move(body), visibility);
 }
 
-std::vector<Parameter> Parser::parameterList() {
+std::vector<std::unique_ptr<Parameter> > Parser::parameterList() {
     consume(TokenType::LParen, "Expected '('");
-    std::vector<Parameter> params;
+    std::vector<std::unique_ptr<Parameter> > params;
     if (!match(TokenType::RParen)) {
         params.push_back(parameter());
         while (match(TokenType::Comma)) params.push_back(parameter());
+        consume(TokenType::RParen, "Expected ')'");
     }
     return params;
 }
 
-Parameter Parser::parameter() {
+std::unique_ptr<Parameter> Parser::parameter() {
     Token name = consume(TokenType::Identifier, "Expected parameter name");
-    consume(TokenType::Colon, "Expected parameter declaration");
+    consume(TokenType::Colon, "Incomplete parameter declaration");
     auto type = typeDeclaration();
-    return {name.toString(), std::move(type), Visibility::PUBLIC};
+    return std::make_unique<Parameter>(name.toString(), std::move(type), Visibility::PUBLIC);
 }
 
 std::unique_ptr<ASTNode> Parser::conditionalStatement() {
@@ -115,13 +124,15 @@ std::unique_ptr<ASTNode> Parser::conditionalStatement() {
     auto condition = expression();
     consume(TokenType::LBrace, "Expected '{'");
     auto body = block();
+    consume(TokenType::RBrace, "Expected '}'");
     std::unique_ptr<ASTNode> elseNode;
     if (match(TokenType::Else)) {
         if (peek().type == TokenType::If) {
             elseNode = conditionalStatement();
         } else {
-            consume(TokenType::LBrace, "Expected body");
+            consume(TokenType::LBrace, "Expected '{'");
             elseNode = block();
+            consume(TokenType::RBrace, "Expected '}'");
         }
     }
     return std::make_unique<ConditionalStatement>(std::move(condition), std::move(body), std::move(elseNode));
@@ -132,6 +143,7 @@ std::unique_ptr<ASTNode> Parser::whileStatement() {
     auto condition = expression();
     consume(TokenType::LBrace, "Expected '{'");
     auto body = block();
+    consume(TokenType::RBrace, "Expected '}'");
     return std::make_unique<WhileStatement>(std::move(condition), std::move(body));
 }
 
@@ -142,28 +154,30 @@ std::unique_ptr<ASTNode> Parser::forStatement() {
     auto iterable = expression();
     consume(TokenType::LBrace, "Expected '{'");
     auto body = block();
+    consume(TokenType::RBrace, "Expected '}'");
     return std::make_unique<ForStatement>(std::make_unique<Identifier>(identifier.toString()), std::move(iterable),
                                           std::move(body));
 }
 
 std::unique_ptr<Body> Parser::block() {
-    auto visibilityModifier = Visibility::PUBLIC;
-    switch (peek().type) {
-        case TokenType::Public:
-            consume(TokenType::Public, "Expected visibility modifier");
-            break;
-        case TokenType::Private:
-            consume(TokenType::Private, "Expected visibility modifier");
-            visibilityModifier = Visibility::PRIVATE;
-            break;
-        case TokenType::Internal:
-            consume(TokenType::Internal, "Expected visibility modifier");
-            visibilityModifier = Visibility::INTERNAL;
-            break;
-        default: ;
-    }
-    std::vector<std::unique_ptr<ASTNode>> children;
-    while (peek().type != TokenType::RBrace) {
+    std::vector<std::unique_ptr<ASTNode> > children;
+    while (peek().type != TokenType::RBrace && peek().type != TokenType::EndOfFile) {
+        auto visibilityModifier = Visibility::PUBLIC;
+        switch (peek().type) {
+            case TokenType::Public:
+                consume(TokenType::Public, "Expected visibility modifier");
+                break;
+            case TokenType::Private:
+                consume(TokenType::Private, "Expected visibility modifier");
+                visibilityModifier = Visibility::PRIVATE;
+                break;
+            case TokenType::Internal:
+                consume(TokenType::Internal, "Expected visibility modifier");
+                visibilityModifier = Visibility::INTERNAL;
+                break;
+            default: ;
+        }
+
         switch (peek().type) {
             case TokenType::If:
                 children.push_back(conditionalStatement());
@@ -183,9 +197,12 @@ std::unique_ptr<Body> Parser::block() {
             case TokenType::Class:
                 children.push_back(classDeclaration(visibilityModifier));
                 break;
+            case TokenType::Return:
+                children.push_back(returnStatement());
+                break;
             case TokenType::Newline:
                 consume();
-                if (auto next = block(); !next->children.empty()) children.push_back(std::move(next));
+                break;
             default:
                 children.push_back(expression());
                 break;
@@ -194,8 +211,14 @@ std::unique_ptr<Body> Parser::block() {
     return std::make_unique<Body>(std::move(children));
 }
 
-std::vector<std::unique_ptr<TypeNode>> Parser::genericArgumentsDeclaration() {
-    std::vector<std::unique_ptr<TypeNode>> generics;
+std::unique_ptr<ASTNode> Parser::returnStatement() {
+    consume(TokenType::Return, "Expected return statement");
+    auto expr = expression();
+    return std::make_unique<ReturnExpression>(std::move(expr));
+}
+
+std::vector<std::unique_ptr<TypeNode> > Parser::genericArgumentsDeclaration() {
+    std::vector<std::unique_ptr<TypeNode> > generics;
     if (match(TokenType::LBracket)) {
         do {
             auto typeName = consume(TokenType::Identifier, "Expected generic type argument");
@@ -213,6 +236,8 @@ std::vector<std::string> Parser::genericParametersDeclaration() {
     if (match(TokenType::LBracket)) {
         do params.push_back(consume(TokenType::Identifier, "Expected generic parameter").toString());
         while (match(TokenType::Comma));
+
+        consume(TokenType::RBracket, "Expected ']'");
     }
     return params;
 }
@@ -244,6 +269,7 @@ std::unique_ptr<Expression> Parser::parsePrefix() {
         case TokenType::IntLiteral:
         case TokenType::StringLiteral:
         case TokenType::FloatLiteral:
+        case TokenType::Literal:
         case TokenType::True:
         case TokenType::False:
             return std::make_unique<Literal>(next);

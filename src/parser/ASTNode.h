@@ -17,16 +17,24 @@
 struct ASTNode {
     virtual ~ASTNode() = default;
 
+    NodeKind kind;
+
     virtual void accept(Visitor *visitor) = 0;
+
+    ASTNode(NodeKind kind) : kind(kind) {
+    }
 };
 
 struct TypeNode : ASTNode {
     std::string typeClass;
-    std::vector<std::unique_ptr<TypeNode>> genericParams;
+    std::vector<std::unique_ptr<TypeNode> > genericParams;
 
-    TypeNode(std::string typeClass, std::vector<std::unique_ptr<TypeNode>> genericParams) : typeClass(std::move(typeClass)),
-                                                                              genericParams(std::move(genericParams)) {
+    TypeNode(std::string typeClass, std::vector<std::unique_ptr<TypeNode> > genericParams) : ASTNode(NodeKind::TYPE),
+        typeClass(std::move(typeClass)),
+        genericParams(std::move(genericParams)) {
     }
+
+    TypeNode(std::string typeClass) : ASTNode(NodeKind::TYPE), typeClass(std::move(typeClass)) {}
 
     void accept(Visitor *visitor) override {
         visitor->visit(this);
@@ -38,8 +46,9 @@ struct Parameter : ASTNode {
     std::unique_ptr<TypeNode> type;
     Visibility visibility;
 
-    Parameter(std::string name, std::unique_ptr<TypeNode> type, const Visibility visibility) : name(std::move(name)),
-        type(std::move(type)), visibility(visibility) {
+    Parameter(std::string name, std::unique_ptr<TypeNode> type,
+              const Visibility visibility) : ASTNode(NodeKind::PARAMETER), name(std::move(name)),
+                                             type(std::move(type)), visibility(visibility) {
     }
 
     void accept(Visitor *visitor) override {
@@ -48,8 +57,10 @@ struct Parameter : ASTNode {
 };
 
 struct Body : ASTNode {
-    std::vector<std::unique_ptr<ASTNode>> children;
-    Body(std::vector<std::unique_ptr<ASTNode>> children) : children(std::move(children)) {}
+    std::vector<std::unique_ptr<ASTNode> > children;
+
+    Body(std::vector<std::unique_ptr<ASTNode> > children) : ASTNode(NodeKind::BODY), children(std::move(children)) {
+    }
 
     void accept(Visitor *visitor) override {
         visitor->visit(this);
@@ -59,15 +70,16 @@ struct Body : ASTNode {
 struct Function : ASTNode {
     std::string name;
     std::unique_ptr<TypeNode> returnType;
-    std::vector<Parameter> params;
+    std::vector<std::unique_ptr<Parameter>> params;
     std::vector<std::string> genericParams;
     std::unique_ptr<Body> body;
     Visibility visibility;
 
     Function(std::string name, std::unique_ptr<TypeNode> returnType, std::vector<std::string> genericParams,
-             std::vector<Parameter> params, std::unique_ptr<Body> body,
+             std::vector<std::unique_ptr<Parameter>> params, std::unique_ptr<Body> body,
              const Visibility visibility)
-        : name(std::move(name)), returnType(std::move(returnType)), params(std::move(params)),
+        : ASTNode(NodeKind::FUNCTION), name(std::move(name)), returnType(std::move(returnType)),
+          params(std::move(params)),
           genericParams(std::move(genericParams)), body(std::move(body)),
           visibility(visibility) {
     }
@@ -80,15 +92,16 @@ struct Function : ASTNode {
 struct ExtensionFunction : ASTNode {
     std::string name;
     std::unique_ptr<TypeNode> returnType, extensionOn;
-    std::vector<Parameter> params;
+    std::vector<std::unique_ptr<Parameter>> params;
     std::vector<std::string> genericParams;
     std::unique_ptr<Body> body;
     Visibility visibility;
 
     ExtensionFunction(std::string name, std::unique_ptr<TypeNode> returnType, std::unique_ptr<TypeNode> extensionOn,
-                      std::vector<Parameter> params, std::vector<std::string> genericParams,
+                      std::vector<std::unique_ptr<Parameter>> params, std::vector<std::string> genericParams,
                       std::unique_ptr<Body> body, const Visibility visibility)
-        : name(std::move(name)), returnType(std::move(returnType)), extensionOn(std::move(extensionOn)),
+        : ASTNode(NodeKind::EXT_FUNCTION), name(std::move(name)), returnType(std::move(returnType)),
+          extensionOn(std::move(extensionOn)),
           params(std::move(params)), genericParams(std::move(genericParams)), body(std::move(body)),
           visibility(visibility) {
     }
@@ -100,14 +113,15 @@ struct ExtensionFunction : ASTNode {
 
 struct Class : ASTNode {
     std::string name;
-    std::vector<Parameter> params;
+    std::vector<std::unique_ptr<Parameter>> params;
     std::vector<std::string> genericParams;
     std::unique_ptr<Body> body;
     Visibility visibility;
 
-    Class(std::string name, std::vector<Parameter> params, std::vector<std::string> genericParams,
+    Class(std::string name, std::vector<std::unique_ptr<Parameter>> params, std::vector<std::string> genericParams,
           std::unique_ptr<Body> body, const Visibility visibility)
-        : name(std::move(name)), params(std::move(params)), genericParams(std::move(genericParams)),
+        : ASTNode(NodeKind::CLASS), name(std::move(name)), params(std::move(params)),
+          genericParams(std::move(genericParams)),
           body(std::move(body)),
           visibility(visibility) {
     }
@@ -122,7 +136,9 @@ struct Expression : ASTNode {
     ~Expression() override = default;
 
     std::shared_ptr<Type> evaluatedType;
-    Expression() : evaluatedType() {};
+
+    Expression(NodeKind kind) : ASTNode(kind), evaluatedType() {
+    };
 };
 
 struct BinaryExpr : Expression {
@@ -130,7 +146,7 @@ struct BinaryExpr : Expression {
     Token op;
 
     BinaryExpr(Token op, std::unique_ptr<Expression> left, std::unique_ptr<Expression> right)
-        : left(std::move(left)), right(std::move(right)), op(std::move(op)) {
+        : Expression(NodeKind::BINARY_EXPR), left(std::move(left)), right(std::move(right)), op(std::move(op)) {
     }
 
     void accept(Visitor *visitor) override {
@@ -145,7 +161,7 @@ struct ConditionalStatement : ASTNode {
 
     ConditionalStatement(std::unique_ptr<Expression> condition, std::unique_ptr<ASTNode> body,
                          std::unique_ptr<ASTNode> elseNode)
-        : condition(std::move(condition)), body(std::move(body)), elseNode(std::move(elseNode)) {
+        : ASTNode(NodeKind::IF), condition(std::move(condition)), body(std::move(body)), elseNode(std::move(elseNode)) {
     }
 
     void accept(Visitor *visitor) override {
@@ -158,7 +174,7 @@ struct WhileStatement : ASTNode {
     std::unique_ptr<Body> body;
 
     WhileStatement(std::unique_ptr<Expression> condition, std::unique_ptr<Body> body)
-        : condition(std::move(condition)), body(std::move(body)) {
+        : ASTNode(NodeKind::WHILE), condition(std::move(condition)), body(std::move(body)) {
     };
 
     void accept(Visitor *visitor) override {
@@ -170,7 +186,8 @@ struct Identifier : Expression {
     std::string name;
     std::shared_ptr<Type> evaluatedType;
 
-    Identifier(std::string name) : name(std::move(name)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+    Identifier(std::string name) : Expression(NodeKind::IDENTIFIER), name(std::move(name)),
+                                   evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     };
 
     void accept(Visitor *visitor) override {
@@ -185,7 +202,8 @@ struct ForStatement : ASTNode {
 
     ForStatement(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> iterable,
                  std::unique_ptr<Body> body)
-        : identifier(std::move(identifier)), iterable(std::move(iterable)), body(std::move(body)) {
+        : ASTNode(NodeKind::FOR), identifier(std::move(identifier)), iterable(std::move(iterable)),
+          body(std::move(body)) {
     }
 
     void accept(Visitor *visitor) override {
@@ -197,7 +215,8 @@ struct UnaryExpression : Expression {
     Token op;
     std::unique_ptr<Expression> right;
 
-    UnaryExpression(Token op, std::unique_ptr<Expression> right) : op(std::move(op)), right(std::move(right)) {
+    UnaryExpression(Token op, std::unique_ptr<Expression> right) : Expression(NodeKind::UNARY_EXPR), op(std::move(op)),
+                                                                   right(std::move(right)) {
     };
 
     void accept(Visitor *visitor) override {
@@ -209,7 +228,8 @@ struct Literal : Expression {
     Token token;
     std::shared_ptr<Type> evaluatedType;
 
-    Literal(Token token) : token(std::move(token)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+    Literal(Token token) : Expression(NodeKind::LITERAL), token(std::move(token)),
+                           evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     };
 
     void accept(Visitor *visitor) override {
@@ -223,7 +243,8 @@ struct FunctionCallExpression : Expression {
     std::shared_ptr<Type> evaluatedType;
 
     FunctionCallExpression(std::unique_ptr<Expression> callee, std::vector<std::unique_ptr<Expression> > args)
-        :Expression(), callee(std::move(callee)), args(std::move(args)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+        : Expression(NodeKind::FUNC_CALL), callee(std::move(callee)), args(std::move(args)),
+          evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     };
 
     void accept(Visitor *visitor) override {
@@ -236,9 +257,22 @@ struct GetExpression : Expression {
     std::string propertyName;
     std::shared_ptr<Type> evaluatedType;
 
-    GetExpression(std::unique_ptr<Expression> left, std::string propertyName) : left(std::move(left)),
+    GetExpression(std::unique_ptr<Expression> left, std::string propertyName) : Expression(NodeKind::GET_EXPR),
+        left(std::move(left)),
         propertyName(std::move(propertyName)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     };
+
+    void accept(Visitor *visitor) override {
+        visitor->visit(this);
+    }
+};
+
+struct ReturnExpression : Expression {
+    std::unique_ptr<Expression> value;
+
+    ReturnExpression(std::unique_ptr<Expression> value) : Expression(NodeKind::RETURN_EXPR), value(std::move(value)) {
+
+    }
 
     void accept(Visitor *visitor) override {
         visitor->visit(this);
@@ -251,8 +285,12 @@ struct CompoundAssignExpression : Expression {
     std::unique_ptr<Expression> value;
     std::shared_ptr<Type> evaluatedType;
 
-    CompoundAssignExpression(std::string name, Token op, std::unique_ptr<Expression> value) : name(std::move(name)),
-        op(std::move(op)), value(std::move(value)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+    CompoundAssignExpression(std::string name, Token op,
+                             std::unique_ptr<Expression> value) : Expression(NodeKind::COMP_ASSIGN_EXPR),
+                                                                  name(std::move(name)),
+                                                                  op(std::move(op)), value(std::move(value)),
+                                                                  evaluatedType(
+                                                                      std::make_shared<Type>(Type::Uninitialized())) {
     }
 
     void accept(Visitor *visitor) override {
@@ -269,7 +307,7 @@ struct CompoundSetExpression : Expression {
 
     CompoundSetExpression(std::unique_ptr<Expression> object, std::string propertyName, Token op,
                           std::unique_ptr<Expression> value)
-        : object(std::move(object)), propertyName(std::move(propertyName)), op(std::move(op)), value(std::move(value)),
+        : Expression(NodeKind::COMP_SET_EXPR), object(std::move(object)), propertyName(std::move(propertyName)), op(std::move(op)), value(std::move(value)),
           evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     }
 
@@ -284,7 +322,7 @@ struct AssignExpression : Expression {
     std::shared_ptr<Type> evaluatedType;
 
     AssignExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> value)
-        : left(std::move(left)), value(std::move(value)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+        : Expression(NodeKind::ASSIGN_EXPR),left(std::move(left)), value(std::move(value)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
     }
 
     void accept(Visitor *visitor) override {
