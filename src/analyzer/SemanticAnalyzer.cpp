@@ -60,6 +60,7 @@ void SemanticAnalyzer::visit(WhileStatement *expr) {
 }
 
 void SemanticAnalyzer::visit(Identifier *expr) {
+
 }
 
 void SemanticAnalyzer::visit(UnaryExpression *expr) {
@@ -178,18 +179,18 @@ std::vector<std::unique_ptr<ASTNode>> SemanticAnalyzer::analyze(std::vector<std:
 }
 
 std::vector<std::unique_ptr<Type>> SemanticAnalyzer::defineParameters(
-    SymbolTable &thisSymbolTable, std::vector<Parameter> &params) {
+    SymbolTable &thisSymbolTable, std::vector<std::unique_ptr<Parameter>> &params) {
     std::vector<std::unique_ptr<Type>> out;
     for (auto &param: params) {
-        param.accept(this);
+        param->accept(this);
         std::vector<std::unique_ptr<Type>> genericParams;
-        for (auto &generic: param.type->genericParams) {
+        for (auto &generic: param->type->genericParams) {
             auto type = typeFromNode(generic.get());
             genericParams.push_back(std::move(type));
         }
 
-        auto paramType = std::make_unique<Type>(Type::Class(param.name, std::move(genericParams)));
-        const auto paramSymbol = std::make_shared<Symbol>(param.name, paramType, param.visibility, false);
+        auto paramType = std::make_unique<Type>(Type::Class(param->name, std::move(genericParams)));
+        const auto paramSymbol = std::make_shared<Symbol>(param->name, paramType, param->visibility, false);
         out.push_back(std::move(paramType));
         thisSymbolTable.define(paramSymbol->name, paramSymbol);
     }

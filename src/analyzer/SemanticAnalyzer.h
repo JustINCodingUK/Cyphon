@@ -35,7 +35,7 @@ public:
     std::vector<std::unique_ptr<ASTNode>> analyze(std::vector<std::unique_ptr<ASTNode>> ast);
 
 private:
-    std::vector<std::unique_ptr<Type>> defineParameters(SymbolTable& thisSymbolTable, std::vector<Parameter>& params);
+    std::vector<std::unique_ptr<Type>> defineParameters(SymbolTable& thisSymbolTable, std::vector<std::unique_ptr<Parameter>>& params);
 
     static std::unique_ptr<Type> typeFromNode(const TypeNode* node);
 };
