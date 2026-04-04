@@ -30,6 +30,7 @@ public:
     void visit(Class *expr) override;
     void visit(Function *expr) override;
     void visit(ExtensionFunction *expr) override;
+    void visit(ReturnExpression *expr) override;
     void visit(Parameter *expr) override;
 
     std::vector<std::unique_ptr<ASTNode>> analyze(std::vector<std::unique_ptr<ASTNode>> ast);

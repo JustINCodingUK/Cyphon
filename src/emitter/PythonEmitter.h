@@ -39,6 +39,7 @@ public:
     void visit(Function *expr) override;
     void visit(ExtensionFunction *expr) override;
     void visit(Parameter *expr) override;
+    void visit(ReturnExpression *expr) override;
     void visit(Body *expr) override;
     void begin();
     void writeToFile(const std::string& fileName);
