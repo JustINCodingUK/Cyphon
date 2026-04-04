@@ -1,0 +1,13 @@
+class FirebaseClient[T](http_client: HttpClient, json_serializer: JsonSerializer) {
+
+    def createDocument(object: T) -> HttpStatus {
+        json = json_serializer.serialize(object)
+        http_client.post("https://somewhere", json)
+    }
+
+    private def someSecretMethod() {}
+}
+
+ext def FirebaseClient[T].extensionFunction[T](object: T) {
+    a = int(createDocument(object))
+}

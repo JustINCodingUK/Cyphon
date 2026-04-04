@@ -1,0 +1,1 @@
+def someFunction(a: int, b: str) -> bool {}

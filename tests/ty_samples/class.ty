@@ -1,0 +1,6 @@
+private class SomeClass[T](a: int, b: str) {
+    def someMethod()   {
+
+
+    }
+}
