@@ -27,8 +27,9 @@ public:
     void visit(ConditionalStatement *expr) override;
     void visit(ForStatement *expr) override;
     void visit(WhileStatement *expr) override;
-    void visit(Identifier *expr) override;
+    void visit(Identifier *expr, bool checkExisting=false) override;
     void visit(UnaryExpression *expr) override;
+    void visit(ExternNode *expr) override;
     void visit(Literal *expr) override;
     void visit(FunctionCallExpression *expr) override;
     void visit(GetExpression *expr) override;
