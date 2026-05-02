@@ -9,26 +9,29 @@
 #include <vector>
 
 enum class TypeKind {
-    INT, FLOAT, STRING, BOOL, NONE, CLASS, FUNCTION, ERROR, ANY, UNINITIALIZED
+    INT, FLOAT, STRING, BOOL, NONE, CLASS, CLASS_SYM, FUNCTION, ERROR, ANY, UNINITIALIZED
 };
 
 struct Type {
     TypeKind kind;
     std::string className;
-    std::vector<std::unique_ptr<Type>>& wrappedTypes;
+    std::vector<std::shared_ptr<Type>> wrappedTypes;
 
     static Type Int();
     static Type Float();
     static Type String();
     static Type Bool();
     static Type None();
-    static Type Class(std::string className, std::vector<std::unique_ptr<Type>> wrappedTypes);
-    static Type Function(std::unique_ptr<Type> returnType, std::vector<std::unique_ptr<Type>> paramTypes);
+    static Type Class(std::string className, std::vector<std::shared_ptr<Type>> wrappedTypes);
+    static Type ClassSymbol(const std::string &className, const std::vector<std::shared_ptr<Type>>& wrappedTypes);
+    static Type Function(std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> paramTypes, std::string& name);
     static Type Any();
     static Type Error();
     static Type Uninitialized();
 
     bool operator==(const Type &other) const;
 };
+
+void print_type(Type *type);
 
 #endif //TYPHON_TYPE_H
