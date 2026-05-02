@@ -34,7 +34,8 @@ struct TypeNode : ASTNode {
         genericParams(std::move(genericParams)) {
     }
 
-    TypeNode(std::string typeClass) : ASTNode(NodeKind::TYPE), typeClass(std::move(typeClass)) {}
+    TypeNode(std::string typeClass) : ASTNode(NodeKind::TYPE), typeClass(std::move(typeClass)) {
+    }
 
     void accept(Visitor *visitor) override {
         visitor->visit(this);
@@ -67,16 +68,27 @@ struct Body : ASTNode {
     }
 };
 
+struct ExternNode : ASTNode {
+    std::unique_ptr<Body> body;
+
+    ExternNode(std::unique_ptr<Body> body) : ASTNode(NodeKind::EXTERN), body(std::move(body)) {
+    }
+
+    void accept(Visitor *visitor) override {
+        visitor->visit(this);
+    }
+};
+
 struct Function : ASTNode {
     std::string name;
     std::unique_ptr<TypeNode> returnType;
-    std::vector<std::unique_ptr<Parameter>> params;
+    std::vector<std::unique_ptr<Parameter> > params;
     std::vector<std::string> genericParams;
     std::unique_ptr<Body> body;
     Visibility visibility;
 
     Function(std::string name, std::unique_ptr<TypeNode> returnType, std::vector<std::string> genericParams,
-             std::vector<std::unique_ptr<Parameter>> params, std::unique_ptr<Body> body,
+             std::vector<std::unique_ptr<Parameter> > params, std::unique_ptr<Body> body,
              const Visibility visibility)
         : ASTNode(NodeKind::FUNCTION), name(std::move(name)), returnType(std::move(returnType)),
           params(std::move(params)),
@@ -92,13 +104,13 @@ struct Function : ASTNode {
 struct ExtensionFunction : ASTNode {
     std::string name;
     std::unique_ptr<TypeNode> returnType, extensionOn;
-    std::vector<std::unique_ptr<Parameter>> params;
+    std::vector<std::unique_ptr<Parameter> > params;
     std::vector<std::string> genericParams;
     std::unique_ptr<Body> body;
     Visibility visibility;
 
     ExtensionFunction(std::string name, std::unique_ptr<TypeNode> returnType, std::unique_ptr<TypeNode> extensionOn,
-                      std::vector<std::unique_ptr<Parameter>> params, std::vector<std::string> genericParams,
+                      std::vector<std::unique_ptr<Parameter> > params, std::vector<std::string> genericParams,
                       std::unique_ptr<Body> body, const Visibility visibility)
         : ASTNode(NodeKind::EXT_FUNCTION), name(std::move(name)), returnType(std::move(returnType)),
           extensionOn(std::move(extensionOn)),
@@ -113,12 +125,12 @@ struct ExtensionFunction : ASTNode {
 
 struct Class : ASTNode {
     std::string name;
-    std::vector<std::unique_ptr<Parameter>> params;
+    std::vector<std::unique_ptr<Parameter> > params;
     std::vector<std::string> genericParams;
     std::unique_ptr<Body> body;
     Visibility visibility;
 
-    Class(std::string name, std::vector<std::unique_ptr<Parameter>> params, std::vector<std::string> genericParams,
+    Class(std::string name, std::vector<std::unique_ptr<Parameter> > params, std::vector<std::string> genericParams,
           std::unique_ptr<Body> body, const Visibility visibility)
         : ASTNode(NodeKind::CLASS), name(std::move(name)), params(std::move(params)),
           genericParams(std::move(genericParams)),
@@ -137,7 +149,8 @@ struct Expression : ASTNode {
 
     std::shared_ptr<Type> evaluatedType;
 
-    Expression(NodeKind kind) : ASTNode(kind), evaluatedType() {
+    Expression(NodeKind kind, const std::shared_ptr<Type> &evaluatedType) : ASTNode(kind),
+                                                                            evaluatedType(evaluatedType) {
     };
 };
 
@@ -146,7 +159,8 @@ struct BinaryExpr : Expression {
     Token op;
 
     BinaryExpr(Token op, std::unique_ptr<Expression> left, std::unique_ptr<Expression> right)
-        : Expression(NodeKind::BINARY_EXPR), left(std::move(left)), right(std::move(right)), op(std::move(op)) {
+        : Expression(NodeKind::BINARY_EXPR, std::make_shared<Type>(Type::Uninitialized())), left(std::move(left)),
+          right(std::move(right)), op(std::move(op)) {
     }
 
     void accept(Visitor *visitor) override {
@@ -184,10 +198,11 @@ struct WhileStatement : ASTNode {
 
 struct Identifier : Expression {
     std::string name;
-    std::shared_ptr<Type> evaluatedType;
+    bool addSelf;
 
-    Identifier(std::string name) : Expression(NodeKind::IDENTIFIER), name(std::move(name)),
-                                   evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+    Identifier(std::string name, bool addSelf = false) : Expression(NodeKind::IDENTIFIER,
+                                                                    std::make_shared<Type>(Type::Uninitialized())),
+                                                         name(std::move(name)), addSelf(addSelf) {
     };
 
     void accept(Visitor *visitor) override {
@@ -215,7 +230,7 @@ struct UnaryExpression : Expression {
     Token op;
     std::unique_ptr<Expression> right;
 
-    UnaryExpression(Token op, std::unique_ptr<Expression> right) : Expression(NodeKind::UNARY_EXPR), op(std::move(op)),
+    UnaryExpression(Token op, std::unique_ptr<Expression> right) : Expression(NodeKind::UNARY_EXPR, std::make_shared<Type>(Type::Uninitialized())), op(std::move(op)),
                                                                    right(std::move(right)) {
     };
 
@@ -226,10 +241,8 @@ struct UnaryExpression : Expression {
 
 struct Literal : Expression {
     Token token;
-    std::shared_ptr<Type> evaluatedType;
 
-    Literal(Token token) : Expression(NodeKind::LITERAL), token(std::move(token)),
-                           evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+    Literal(Token token) : Expression(NodeKind::LITERAL, std::make_shared<Type>(Type::Uninitialized())), token(std::move(token)) {
     };
 
     void accept(Visitor *visitor) override {
@@ -240,11 +253,9 @@ struct Literal : Expression {
 struct FunctionCallExpression : Expression {
     std::unique_ptr<Expression> callee;
     std::vector<std::unique_ptr<Expression> > args;
-    std::shared_ptr<Type> evaluatedType;
 
     FunctionCallExpression(std::unique_ptr<Expression> callee, std::vector<std::unique_ptr<Expression> > args)
-        : Expression(NodeKind::FUNC_CALL), callee(std::move(callee)), args(std::move(args)),
-          evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+        : Expression(NodeKind::FUNC_CALL, std::make_shared<Type>(Type::Uninitialized())), callee(std::move(callee)), args(std::move(args)) {
     };
 
     void accept(Visitor *visitor) override {
@@ -255,11 +266,10 @@ struct FunctionCallExpression : Expression {
 struct GetExpression : Expression {
     std::unique_ptr<Expression> left;
     std::string propertyName;
-    std::shared_ptr<Type> evaluatedType;
 
-    GetExpression(std::unique_ptr<Expression> left, std::string propertyName) : Expression(NodeKind::GET_EXPR),
+    GetExpression(std::unique_ptr<Expression> left, std::string propertyName) : Expression(NodeKind::GET_EXPR, std::make_shared<Type>(Type::Uninitialized())),
         left(std::move(left)),
-        propertyName(std::move(propertyName)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+        propertyName(std::move(propertyName)) {
     };
 
     void accept(Visitor *visitor) override {
@@ -270,8 +280,7 @@ struct GetExpression : Expression {
 struct ReturnExpression : Expression {
     std::unique_ptr<Expression> value;
 
-    ReturnExpression(std::unique_ptr<Expression> value) : Expression(NodeKind::RETURN_EXPR), value(std::move(value)) {
-
+    ReturnExpression(std::unique_ptr<Expression> value) : Expression(NodeKind::RETURN_EXPR, std::make_shared<Type>(Type::Uninitialized())), value(std::move(value)) {
     }
 
     void accept(Visitor *visitor) override {
@@ -283,14 +292,11 @@ struct CompoundAssignExpression : Expression {
     std::string name;
     Token op;
     std::unique_ptr<Expression> value;
-    std::shared_ptr<Type> evaluatedType;
 
     CompoundAssignExpression(std::string name, Token op,
-                             std::unique_ptr<Expression> value) : Expression(NodeKind::COMP_ASSIGN_EXPR),
+                             std::unique_ptr<Expression> value) : Expression(NodeKind::COMP_ASSIGN_EXPR, std::make_shared<Type>(Type::Uninitialized())),
                                                                   name(std::move(name)),
-                                                                  op(std::move(op)), value(std::move(value)),
-                                                                  evaluatedType(
-                                                                      std::make_shared<Type>(Type::Uninitialized())) {
+                                                                  op(std::move(op)), value(std::move(value)) {
     }
 
     void accept(Visitor *visitor) override {
@@ -303,12 +309,11 @@ struct CompoundSetExpression : Expression {
     std::string propertyName;
     Token op;
     std::unique_ptr<Expression> value;
-    std::shared_ptr<Type> evaluatedType;
 
     CompoundSetExpression(std::unique_ptr<Expression> object, std::string propertyName, Token op,
                           std::unique_ptr<Expression> value)
-        : Expression(NodeKind::COMP_SET_EXPR), object(std::move(object)), propertyName(std::move(propertyName)), op(std::move(op)), value(std::move(value)),
-          evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+        : Expression(NodeKind::COMP_SET_EXPR, std::make_shared<Type>(Type::Uninitialized())), object(std::move(object)), propertyName(std::move(propertyName)),
+          op(std::move(op)), value(std::move(value)) {
     }
 
     void accept(Visitor *visitor) override {
@@ -319,10 +324,9 @@ struct CompoundSetExpression : Expression {
 struct AssignExpression : Expression {
     std::unique_ptr<Expression> left;
     std::unique_ptr<Expression> value;
-    std::shared_ptr<Type> evaluatedType;
 
     AssignExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> value)
-        : Expression(NodeKind::ASSIGN_EXPR),left(std::move(left)), value(std::move(value)), evaluatedType(std::make_shared<Type>(Type::Uninitialized())) {
+        : Expression(NodeKind::ASSIGN_EXPR, std::make_shared<Type>(Type::Uninitialized())), left(std::move(left)), value(std::move(value)) {
     }
 
     void accept(Visitor *visitor) override {
