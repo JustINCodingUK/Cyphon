@@ -14,7 +14,6 @@ struct UnaryExpression;
 struct Literal;
 struct FunctionCallExpression;
 struct GetExpression;
-struct VariableExpression;
 struct CompoundAssignExpression;
 struct CompoundSetExpression;
 struct AssignExpression;
@@ -25,6 +24,7 @@ struct TypeNode;
 struct ExtensionFunction;
 struct Body;
 struct Parameter;
+struct ExternNode;
 
 class Visitor {
 public:
@@ -34,7 +34,8 @@ public:
     virtual void visit(ConditionalStatement* expr) = 0;
     virtual void visit(ForStatement* expr) = 0;
     virtual void visit(WhileStatement* expr) = 0;
-    virtual void visit(Identifier* expr) = 0;
+    virtual void visit(Identifier* expr, bool checkExisting=false) = 0;
+    virtual void visit(ExternNode* node) = 0;
     virtual void visit(UnaryExpression* expr) = 0;
     virtual void visit(Literal* expr) = 0;
     virtual void visit(FunctionCallExpression* expr) = 0;
