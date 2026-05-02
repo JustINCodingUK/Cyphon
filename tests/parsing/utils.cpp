@@ -188,6 +188,12 @@ void print_node(ASTNode *node, int indent) {
             print_node(p->body.get(), indent + 1);
             break;
         }
+        case NodeKind::RETURN_EXPR: {
+            const auto p = dynamic_cast<ReturnExpression *>(node);
+            print_line("RETURN NODE", indent);
+            print_node(p->value.get(), indent + 1);
+            break;
+        }
         case NodeKind::EXT_FUNCTION: {
             const auto p = dynamic_cast<ExtensionFunction *>(node);
             print_line("EXT_FUNCTION NODE", indent);
